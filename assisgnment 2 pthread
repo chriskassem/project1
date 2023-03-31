@@ -1,0 +1,51 @@
+// Define the number of threads
+#define NUM_THREADS 4
+
+// Define matrices A, B, and C
+int A[M][N], B[N][P], C[M][P];
+
+// Define the submatrices
+int sub_A[M][N/NUM_THREADS], sub_C[M][P/NUM_THREADS];
+
+// Create threads
+pthread_t threads[NUM_THREADS];
+
+// Define thread function
+void *multiply(void *arg)
+{
+   int thread_id = *(int *)arg;
+   int start_row = thread_id * M / NUM_THREADS;
+   int end_row = (thread_id + 1) * M / NUM_THREADS;
+
+   // Calculate the submatrix
+   for (int i = start_row; i < end_row; i++)
+      for (int j = 0; j < P; j++)
+         for (int k = 0; k < N; k++)
+            sub_C[i][j] += sub_A[i][k] * B[k][j];
+
+   // Exit the thread
+   pthread_exit(NULL);
+}
+
+int main()
+{
+   // Divide matrix A into submatrices
+   for (int i = 0; i < NUM_THREADS; i++)
+      for (int j = 0; j < N; j++)
+         sub_A[i][j] = A[i*M/NUM_THREADS][j];
+
+   // Create threads
+   for (int i = 0; i < NUM_THREADS; i++)
+      pthread_create(&threads[i], NULL, multiply, (void *)&i);
+
+   // Wait for threads to finish
+   for (int i = 0; i < NUM_THREADS; i++)
+      pthread_join(threads[i], NULL);
+
+   // Merge the submatrices into matrix C
+   for (int i = 0; i < NUM_THREADS; i++)
+      for (int j = 0; j < P/NUM_THREADS; j++)
+         C[i*M/NUM_THREADS][j] = sub_C[i][j];
+
+   return 0;
+}
